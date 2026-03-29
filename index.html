@@ -347,30 +347,11 @@ function buildMountains() {
       pts.push({ x: rawPts[i].x, y: Math.round((prev + curr * 2 + next) / 4) });
     }
 
-    // Snow caps: find peaks (local minima in y = highest visually)
-    const snowPts = [];
-    if (l <= 1) { // only back 2 layers get snow
-      for (let i = 1; i < pts.length - 1; i++) {
-        if (pts[i].y < pts[i-1].y && pts[i].y < pts[i+1].y) {
-          snowPts.push(i); // peak index
-        }
-      }
-    }
-
-    layers.push({ pts, snowPts, layer: l });
+    layers.push({ pts, snowPts: [], layer: l });
   }
 }
 
-function drawSnowCap(pts, peakIdx, alpha) {
-  if (alpha < 0.01) return;
-  const pk = pts[peakIdx];
-  const capH = Math.max(2, Math.round((pts[peakIdx > 0 ? peakIdx-1 : peakIdx].y - pk.y) * 0.35));
-  ctx.fillStyle = `rgba(220,230,255,${alpha})`;
-  for (let dy = 0; dy <= capH; dy++) {
-    const w = Math.max(1, Math.round((capH - dy) * 1.2));
-    ctx.fillRect(pk.x - w, pk.y + dy, w*2+1, 1);
-  }
-}
+
 
 
 // ── Clouds ────────────────────────────────────────────────────
@@ -711,10 +692,7 @@ function drawSun(ph, time) {
 }
 
 function drawMountains(ph) {
-  // Snow cap alpha — only visible at night/dawn
-  const snowAlpha = lerp(ph.a.starAlpha, ph.b.starAlpha, ph.t) * 0.85;
-
-  layers.forEach(({ pts, snowPts, layer: li }) => {
+  layers.forEach(({ pts, layer: li }) => {
     const ci = ph.idx, ni = ph.next;
     const ca = MTN_COLORS[ci]?.[li] || '#111';
     const cb = MTN_COLORS[ni]?.[li] || '#111';
@@ -772,9 +750,14 @@ function draw(now) {
   requestAnimationFrame(draw);
 }
 
-resize();
-buildMountains();
-requestAnimationFrame(draw);
+// Wait for fonts + full page load before starting
+document.fonts.ready.then(() => {
+  resize();
+  buildMountains();
+  startTime = performance.now();
+  requestAnimationFrame(draw);
+  initIcons();
+});
 
 // ── Click to spawn shooting star ──────────────────────────────
 canvas.addEventListener('click', (e) => {
@@ -848,8 +831,7 @@ function initIcons() {
   drawPixelIcon('icon-youtube',   YT, warm);
 }
 
-// Run after DOM ready
-setTimeout(initIcons, 100);
+
 
 </script>
 </body>
