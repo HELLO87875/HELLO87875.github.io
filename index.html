@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VEXOTY — ɴᴏxɪǫ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --pixel: 4px;
+    --sky-top: #0a0a1a;
+    --sky-mid: #1a0a2e;
+    --sky-bot: #2d1b4e;
+    --sun-color: #ff6b35;
+    --text-main: #fff;
+    --text-glow: #ffcc88;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    font-family: 'Press Start 2P', monospace;
+    cursor: crosshair;
+  }
+
+  canvas {
+    display: block;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    image-rendering: pixelated;
+  }
+
+  .overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .brand {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(10px, 3vw, 28px);
+    /* letter-spacing adds space after each char, pushing text right.
+       margin-right: -letter-spacing corrects the visual center. */
+    letter-spacing: 0.3em;
+    margin-right: -0.3em;
+    color: #fff;
+    text-shadow:
+      0 0 8px rgba(255,200,100,0.9),
+      0 0 20px rgba(255,150,50,0.6),
+      0 0 40px rgba(255,100,30,0.3),
+      3px 3px 0 rgba(0,0,0,0.8);
+    animation: flicker 6s infinite;
+    margin-bottom: 28px;
+    text-align: center;
+  }
+
+  .tagline {
+    font-family: 'VT323', monospace;
+    font-size: clamp(16px, 3.5vw, 36px);
+    letter-spacing: 0.25em;
+    margin-right: -0.25em;
+    color: rgba(255,230,180,0.85);
+    text-shadow:
+      0 0 6px rgba(255,180,80,0.7),
+      2px 2px 0 rgba(0,0,0,0.6);
+    animation: fadeIn 2s ease 0.8s both;
+    text-align: center;
+  }
+
+  .pixel-divider {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 20px 0;
+    animation: fadeIn 2s ease 1.2s both;
+  }
+
+  .pixel-divider span {
+    width: 8px; height: 8px;
+    background: rgba(255,200,100,0.7);
+    display: block;
+    box-shadow: 0 0 6px rgba(255,180,60,0.8);
+    flex-shrink: 0;
+  }
+
+  /* 5 dots: s s BIG s s — middle dot (3rd) is the center anchor */
+  .pixel-divider span:nth-child(3) {
+    width: 12px; height: 12px;
+    background: rgba(255,190,80,1);
+    box-shadow: 0 0 10px rgba(255,160,60,1);
+  }
+
+  .time-label {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    color: rgba(255,220,150,0.7);
+    letter-spacing: 0.15em;
+    z-index: 20;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.8);
+    animation: fadeIn 3s ease 2s both;
+  }
+
+  @keyframes flicker {
+    0%,100% { opacity:1; }
+    92% { opacity:1; }
+    93% { opacity:0.85; }
+    94% { opacity:1; }
+    96% { opacity:0.9; }
+    97% { opacity:1; }
+  }
+
+  @keyframes fadeIn {
+    from { opacity:0; transform: translateY(10px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+
+  /* ── Social Icons ── */
+  .socials {
+    position: fixed;
+    bottom: 32px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    z-index: 20;
+    animation: fadeIn 3s ease 1.5s both;
+    pointer-events: none; /* container doesn't block clicks on canvas */
+  }
+
+  .social-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    cursor: pointer;
+    pointer-events: none; /* icon area not clickable */
+  }
+
+  /* Only the label text is the hitbox */
+  .social-label {
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    letter-spacing: 0.15em;
+    color: rgba(255,220,150,0.65);
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.8);
+    pointer-events: all;
+    cursor: pointer;
+    padding: 4px 8px;
+    transition: color 0.2s, text-shadow 0.2s;
+  }
+
+  .social-label:hover {
+    color: rgba(255,220,100,1);
+    text-shadow:
+      0 0 8px rgba(255,200,60,0.9),
+      0 0 18px rgba(255,160,40,0.5),
+      1px 1px 0 rgba(0,0,0,0.9);
+  }
+
+  .social-icon {
+    width: 32px; height: 32px;
+    image-rendering: pixelated;
+    display: block;
+    pointer-events: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .click-hint {
+    position: fixed;
+    top: 20px;
+    right: 24px;
+    font-family: 'VT323', monospace;
+    font-size: 15px;
+    color: rgba(255,220,150,0.0);
+    letter-spacing: 0.15em;
+    z-index: 20;
+    pointer-events: none;
+    transition: color 1.5s ease, opacity 1.5s ease;
+  }
+  .click-hint.visible {
+    color: rgba(255,180,80,0.55);
+  }
+
+  .vexoty-badge {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: rgba(200,200,255,0.5);
+    letter-spacing: 0.1em;
+    z-index: 20;
+    pointer-events: none;
+    animation: fadeIn 4s ease 3s both;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div class="overlay">
+  <div class="brand">ɴᴏxɪǫ</div>
+  <div class="pixel-divider">
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+  <div class="tagline">BUILT DIFFERENT</div>
+</div>
+
+
+<div class="click-hint">✦ CLICK THE SKY FOR A SHOOTING STAR ✦</div>
+
+<div class="socials">
+  <a class="social-label" href="https://github.com/HELLO87875" target="_blank" rel="noopener">GITHUB</a>
+  <a class="social-label" href="https://instagram.com/shaked8681" target="_blank" rel="noopener">INSTAGRAM</a>
+  <a class="social-label" href="https://youtube.com/@shaked5626" target="_blank" rel="noopener">YOUTUBE</a>
+</div>
+
+<div class="vexoty-badge">✦ vexoty.com</div>
+
+<div class="time-label" id="timeLabel">SUNRISE</div>
+
+<script>
+// ── Lerp helpers ──────────────────────────────────────────────
+function lerp(a, b, t) { return a + (b - a) * t; }
+function lerpHex(c1, c2, t) {
+  const p = (h) => parseInt(h.slice(1), 16);
+  const r = (v) => '#' + v.toString(16).padStart(6,'0');
+  const a = p(c1), b = p(c2);
+  const ar=(a>>16)&0xff, ag=(a>>8)&0xff, ab=a&0xff;
+  const br=(b>>16)&0xff, bg=(b>>8)&0xff, bb=b&0xff;
+  return r((Math.round(lerp(ar,br,t))<<16)|(Math.round(lerp(ag,bg,t))<<8)|Math.round(lerp(ab,bb,t)));
+}
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// Pixel size — bigger = chunkier pixels
+const PIXEL = 6;
+let W, H, cols, rows;
+
+function resize() {
+  canvas.width  = Math.ceil(window.innerWidth  / PIXEL);
+  canvas.height = Math.ceil(window.innerHeight / PIXEL);
+  W = canvas.width; H = canvas.height;
+  cols = W; rows = H;
+  canvas.style.width  = window.innerWidth  + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+}
+window.addEventListener('resize', () => { resize(); buildMountains(); });
+
+// ── Sky palettes per phase ─────────────────────────────────────
+const PHASES = [
+  // 0: night
+  { name:'NIGHT',   top:'#03050f', mid:'#060d24', hor:'#0d1840', sunR:0,   sunG:0,   sunB:0,   sunAlpha:0,   starAlpha:1,   moonAlpha:1  },
+  // 1: pre-dawn
+  { name:'DAWN',    top:'#0a0520', mid:'#1a0a35', hor:'#3d1a55', sunR:80,  sunG:20,  sunB:80,  sunAlpha:0.3, starAlpha:0.5, moonAlpha:0.3 },
+  // 2: sunrise
+  { name:'SUNRISE', top:'#1a0a2e', mid:'#7a2040', hor:'#ff6030', sunR:255, sunG:140, sunB:40,  sunAlpha:1,   starAlpha:0,   moonAlpha:0  },
+  // 3: golden hour
+  { name:'GOLDEN HOUR', top:'#0a1a40', mid:'#3a1060', hor:'#ff8c30', sunR:255, sunG:200, sunB:80,  sunAlpha:1,   starAlpha:0,   moonAlpha:0  },
+  // 4: day
+  { name:'DAY',     top:'#0a2060', mid:'#1a5090', hor:'#60b8f0', sunR:255, sunG:240, sunB:180, sunAlpha:1,   starAlpha:0,   moonAlpha:0  },
+  // 5: afternoon
+  { name:'AFTERNOON',top:'#0d2868', mid:'#1a5590', hor:'#5ab0e8', sunR:255, sunG:230, sunB:150, sunAlpha:0.9, starAlpha:0,   moonAlpha:0  },
+  // 6: sunset
+  { name:'SUNSET',  top:'#120820', mid:'#6a1540', hor:'#ff4010', sunR:255, sunG:80,  sunB:20,  sunAlpha:1,   starAlpha:0.1, moonAlpha:0  },
+  // 7: dusk
+  { name:'DUSK',    top:'#080518', mid:'#200a40', hor:'#601040', sunR:120, sunG:30,  sunB:60,  sunAlpha:0.4, starAlpha:0.6, moonAlpha:0.5 },
+];
+
+// Duration each phase lasts (ms)
+const PHASE_DURATION = 6000;
+const TOTAL = PHASES.length * PHASE_DURATION;
+
+// ── Stars ──────────────────────────────────────────────────────
+const STARS = Array.from({length:80}, () => ({
+  x: Math.random(),
+  y: Math.random() * 0.6,
+  r: Math.random() < 0.3 ? 1 : 0,
+  twinkle: Math.random() * Math.PI * 2
+}));
+
+// ── Moon ──────────────────────────────────────────────────────
+const MOON = { x: 0.75, y: 0.18 };
+
+// ── Mountain layers ───────────────────────────────────────────
+let layers = [];
+
+// Seeded pseudo-random for consistent mountains on resize
+function seededRand(seed) {
+  let s = seed;
+  return () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
+}
+
+function buildMountains() {
+  layers = [];
+  const numLayers = 6;
+
+  for (let l = 0; l < numLayers; l++) {
+    const rand = seededRand(l * 999 + 42);
+    const pts = [];
+    // More segments for back layers (distant = more jagged detail)
+    const segs = Math.floor(W / Math.max(2, 5 - l)) + 4;
+    // Back layers higher up, front layers lower
+    const baseY = H * (0.62 + l * 0.06);
+    // Back layers taller & more dramatic
+    const amp   = H * (0.16 - l * 0.02);
+
+    // Generate control points with varied peak styles
+    const rawPts = [];
+    for (let i = 0; i <= segs; i++) {
+      const nx = i / segs;
+      // Combine multiple frequencies for natural-looking ridgelines
+      const h1 = Math.abs(Math.sin(i * 1.7 + l * 13.3)) * amp;
+      const h2 = Math.abs(Math.sin(i * 0.9 + l * 7.7))  * amp * 0.5;
+      const h3 = Math.abs(Math.sin(i * 3.1 + l * 3.1))  * amp * 0.2;
+      // Random spikes for sharp peaks
+      const spike = rand() < 0.15 ? rand() * amp * 0.5 : 0;
+      rawPts.push({
+        x: Math.round(nx * W),
+        y: Math.round(baseY - h1 - h2 - h3 - spike)
+      });
+    }
+
+    // Smooth pass — average neighbours for pixel-art stepped look
+    for (let i = 0; i < rawPts.length; i++) {
+      const prev = rawPts[Math.max(0, i-1)].y;
+      const curr = rawPts[i].y;
+      const next = rawPts[Math.min(rawPts.length-1, i+1)].y;
+      pts.push({ x: rawPts[i].x, y: Math.round((prev + curr * 2 + next) / 4) });
+    }
+
+    // Snow caps: find peaks (local minima in y = highest visually)
+    const snowPts = [];
+    if (l <= 1) { // only back 2 layers get snow
+      for (let i = 1; i < pts.length - 1; i++) {
+        if (pts[i].y < pts[i-1].y && pts[i].y < pts[i+1].y) {
+          snowPts.push(i); // peak index
+        }
+      }
+    }
+
+    layers.push({ pts, snowPts, layer: l });
+  }
+}
+
+function drawSnowCap(pts, peakIdx, alpha) {
+  if (alpha < 0.01) return;
+  const pk = pts[peakIdx];
+  const capH = Math.max(2, Math.round((pts[peakIdx > 0 ? peakIdx-1 : peakIdx].y - pk.y) * 0.35));
+  ctx.fillStyle = `rgba(220,230,255,${alpha})`;
+  for (let dy = 0; dy <= capH; dy++) {
+    const w = Math.max(1, Math.round((capH - dy) * 1.2));
+    ctx.fillRect(pk.x - w, pk.y + dy, w*2+1, 1);
+  }
+}
+
+
+// ── Clouds ────────────────────────────────────────────────────
+// Each cloud has a pixel pattern: array of [dx, dy, w, h] rects relative to anchor
+const CLOUD_SHAPES = [
+  [[0,4,14,3],[2,2,10,3],[4,0,6,3],[5,-1,4,2]],   // puffy
+  [[0,3,20,3],[2,1,16,3],[5,0,10,2]],              // wide flat
+  [[0,4,10,3],[1,2,8,3],[3,0,4,2]],               // small puff
+  [[0,4,18,3],[3,2,12,3],[6,0,6,2],[8,-1,3,2]],   // large
+];
+
+const CLOUDS = Array.from({length: 5}, (_, i) => ({
+  x: Math.random(),
+  y: 0.06 + Math.random() * 0.22,
+  speed: 0.000015 + Math.random() * 0.00002,
+  shape: CLOUD_SHAPES[i % CLOUD_SHAPES.length],
+  fadeOffset: Math.random() * Math.PI * 2, // for gentle opacity pulse
+}));
+
+function drawClouds(ph, time) {
+  const starA = lerp(ph.a.starAlpha, ph.b.starAlpha, ph.t);
+  // Clouds fade out at night, fully visible at day
+  const baseAlpha = Math.max(0, 1 - starA * 1.4);
+  if (baseAlpha < 0.01) return;
+
+  // Sky color at horizon — clouds absorb/reflect it
+  const hor = ph.a.hor; // e.g. '#ff6030'
+  const hr = parseInt(hor.slice(1,3),16);
+  const hg = parseInt(hor.slice(3,5),16);
+  const hb = parseInt(hor.slice(5,7),16);
+
+  // Blend cloud white with horizon tint — low opacity so sky shows through
+  const cr = Math.round(lerp(240, hr, 0.25));
+  const cg = Math.round(lerp(245, hg, 0.25));
+  const cb2 = Math.round(lerp(255, hb, 0.25));
+
+  CLOUDS.forEach(c => {
+    const t2 = (time * c.speed + c.x);
+    const cx = Math.round((t2 % 1.25 - 0.12) * W);
+    const cy = Math.round(c.y * H);
+    // Very low opacity — clouds are translucent wisps
+    const pulse = 0.9 + 0.1 * Math.sin(c.fadeOffset + time * 0.0003);
+    const alpha = baseAlpha * pulse * 0.18;
+
+    ctx.fillStyle = `rgba(${cr},${cg},${cb2},${alpha})`;
+    c.shape.forEach(([dx, dy, w, h]) => {
+      ctx.fillRect(cx + dx, cy + dy, w, h);
+    });
+  });
+}
+
+// ── Birds ─────────────────────────────────────────────────────
+// A bird is drawn as a tiny V/M shape: 5 pixels wide
+// Frame 0 (wings mid): . X . X .  <- v shape
+// Frame 1 (wings up):  X . . . X  <- spread
+// Frame 2 (wings down):. . X . .  then dip on sides
+function drawBird(bx, by, flapT, col) {
+  // flapT 0..1: 0=mid, 0.5=up, 1=mid again (loop)
+  // We use 3 pixel rows max, 5 cols wide
+  const phase = (Math.sin(flapT * Math.PI * 2) + 1) / 2; // 0=down 1=up
+  ctx.fillStyle = col;
+
+  if (phase > 0.65) {
+    // Wings UP — V opens wide
+    ctx.fillRect(bx,     by,   1, 1); // body centre
+    ctx.fillRect(bx - 2, by - 1, 1, 1); // left outer up
+    ctx.fillRect(bx - 1, by,   1, 1); // left inner
+    ctx.fillRect(bx + 1, by,   1, 1); // right inner
+    ctx.fillRect(bx + 2, by - 1, 1, 1); // right outer up
+  } else if (phase < 0.35) {
+    // Wings DOWN — tips dip below body
+    ctx.fillRect(bx,     by,   1, 1);
+    ctx.fillRect(bx - 2, by + 1, 1, 1);
+    ctx.fillRect(bx - 1, by,   1, 1);
+    ctx.fillRect(bx + 1, by,   1, 1);
+    ctx.fillRect(bx + 2, by + 1, 1, 1);
+  } else {
+    // Mid flap — flat W shape
+    ctx.fillRect(bx,     by,   1, 1);
+    ctx.fillRect(bx - 2, by,   1, 1);
+    ctx.fillRect(bx - 1, by,   1, 1);
+    ctx.fillRect(bx + 1, by,   1, 1);
+    ctx.fillRect(bx + 2, by,   1, 1);
+  }
+}
+
+const BIRDS = Array.from({length: 7}, (_, i) => ({
+  x: Math.random(),
+  y: 0.15 + Math.random() * 0.22,
+  speed: 0.00004 + Math.random() * 0.00003,
+  flapOffset: Math.random() * Math.PI * 2,
+  flapSpeed:  0.003 + Math.random() * 0.002,
+  fadeIn: Math.random() * 5000, // stagger fade-in time
+}));
+
+function drawBirds(ph, time) {
+  const starA = lerp(ph.a.starAlpha, ph.b.starAlpha, ph.t);
+  const birdAlpha = Math.max(0, 1 - starA * 2.2);
+  if (birdAlpha < 0.02) return;
+
+  // Silhouette color — dark, with warm tint at golden/sunset
+  const warm = ph.idx >= 2 && ph.idx <= 3 || ph.idx >= 6;
+  const baseCol = warm ? [30, 8, 8] : [15, 15, 30];
+
+  BIRDS.forEach(b => {
+    // Staggered fade-in per bird
+    const fadeAlpha = Math.min(1, Math.max(0, (time - b.fadeIn) / 2000));
+    const alpha = birdAlpha * fadeAlpha * 0.88;
+    if (alpha < 0.02) return;
+
+    const bx = Math.round(((b.x + b.speed * time) % 1.08 - 0.04) * W);
+    const by = Math.round(b.y * H);
+    const flapT = b.flapOffset + time * b.flapSpeed;
+    const col = `rgba(${baseCol[0]},${baseCol[1]},${baseCol[2]},${alpha})`;
+
+    drawBird(bx, by, flapT, col);
+  });
+}
+
+// ── Shooting Stars ────────────────────────────────────────────
+let shootingStars = [];
+let lastShot = 0;
+
+function maybeSpawnStar(time, starAlpha) {
+  if (starAlpha < 0.3) return;
+  if (time - lastShot > 2500 + Math.random() * 4000) {
+    lastShot = time;
+    shootingStars.push({
+      x: 0.1 + Math.random() * 0.6,
+      y: 0.02 + Math.random() * 0.25,
+      vx: 0.003 + Math.random() * 0.004,
+      vy: 0.001 + Math.random() * 0.002,
+      life: 0,
+      maxLife: 40 + Math.random() * 30,
+      len: 8 + Math.floor(Math.random() * 10)
+    });
+  }
+}
+
+function drawShootingStars(ph, time) {
+  const starAlpha = lerp(ph.a.starAlpha, ph.b.starAlpha, ph.t);
+  maybeSpawnStar(time, starAlpha);
+  if (starAlpha < 0.1) { shootingStars = []; return; }
+
+  shootingStars = shootingStars.filter(s => s.life < s.maxLife);
+  shootingStars.forEach(s => {
+    if (!s.manual && starAlpha < 0.1) return;
+    s.life++;
+    s.x += s.vx;
+    s.y += s.vy;
+    const prog = s.life / s.maxLife;
+    const alpha = starAlpha * (1 - prog) * (prog < 0.2 ? prog / 0.2 : 1);
+
+    // Draw trail
+    for (let i = 0; i < s.len; i++) {
+      const t2 = i / s.len;
+      const tx = Math.round((s.x - s.vx * i * 3) * W);
+      const ty = Math.round((s.y - s.vy * i * 3) * H);
+      const ta = alpha * (1 - t2);
+      ctx.fillStyle = `rgba(200,220,255,${ta})`;
+      ctx.fillRect(tx, ty, 1, 1);
+    }
+  });
+}
+
+// ── Fireflies ─────────────────────────────────────────────────
+// Just 6 fireflies, staggered fade-in, tiny single pixel glow
+const FIREFLIES = Array.from({length: 6}, (_, i) => ({
+  x: 0.1 + Math.random() * 0.8,
+  y: 0.58 + Math.random() * 0.28,
+  driftX: (Math.random() - 0.5) * 0.00003,
+  driftY: (Math.random() - 0.5) * 0.00002,
+  glowPhase: Math.random() * Math.PI * 2,
+  glowSpeed: 0.0015 + Math.random() * 0.002,
+  fadeInAt: i * 1800 + Math.random() * 1000, // stagger appearance
+}));
+
+function drawFireflies(ph, time) {
+  const starAlpha = lerp(ph.a.starAlpha, ph.b.starAlpha, ph.t);
+  if (starAlpha < 0.15) return;
+  const sceneAlpha = Math.min(1, (starAlpha - 0.15) / 0.4);
+
+  FIREFLIES.forEach(f => {
+    // Staggered fade in
+    const fadeIn = Math.min(1, Math.max(0, (time - f.fadeInAt) / 3000));
+    if (fadeIn < 0.01) return;
+
+    // Gentle float
+    const fx = Math.round((f.x + Math.sin(time * f.driftX * 30 + f.glowPhase) * 0.02) * W);
+    const fy = Math.round((f.y + Math.sin(time * f.driftY * 30 + f.glowPhase * 1.3) * 0.015) * H);
+
+    // Pulse glow — blink on/off naturally
+    const glow = Math.pow(Math.max(0, Math.sin(f.glowPhase + time * f.glowSpeed)), 2.5);
+    const alpha = sceneAlpha * fadeIn * glow;
+    if (alpha < 0.02) return;
+
+    // Just 3 layers: soft outer, mid, core — all 1-2px
+    ctx.fillStyle = `rgba(180,255,120,${alpha * 0.15})`;
+    ctx.fillRect(fx - 1, fy - 1, 3, 3);
+    ctx.fillStyle = `rgba(220,255,160,${alpha * 0.45})`;
+    ctx.fillRect(fx, fy, 1, 1);
+    // Bright core only at peak glow
+    if (glow > 0.7) {
+      ctx.fillStyle = `rgba(255,255,220,${alpha * 0.9})`;
+      ctx.fillRect(fx, fy, 1, 1);
+    }
+  });
+}
+
+// lerp helpers moved to top of script
+
+// Mountain colors per layer (6 layers) per phase
+// Layer 0 = farthest back (lightest/haziest), Layer 5 = closest (darkest)
+const MTN_COLORS = [
+  // night       far→near
+  ['#0d1a3a','#0a1530','#080f22','#060c1a','#040810','#020508'],
+  // dawn
+  ['#2d1545','#251040','#1d0c35','#15082a','#0d0520','#080318'],
+  // sunrise
+  ['#7a2535','#621d2c','#4d1522','#3d1018','#2d0c12','#1a070c'],
+  // golden hour
+  ['#4a1d60','#3d1850','#301240','#240e30','#180a22','#0e0618'],
+  // day
+  ['#2a4a7a','#1e3a65','#162c50','#10203c','#0a162a','#060e1c'],
+  // afternoon
+  ['#2d4e80','#213c6a','#172e55','#102040','#0a162e','#060e1e'],
+  // sunset
+  ['#5a1525','#471020','#35090f','#260608','#180405','#0e0203'],
+  // dusk
+  ['#200840','#180630','#100422','#0c0318','#080210','#040108'],
+];
+
+// ── Draw ──────────────────────────────────────────────────────
+function getPhase(t) {
+  const cycleT = (t % TOTAL) / TOTAL;
+  const raw = cycleT * PHASES.length;
+  const idx = Math.floor(raw) % PHASES.length;
+  const frac = raw - Math.floor(raw);
+  const next = (idx + 1) % PHASES.length;
+  return { a: PHASES[idx], b: PHASES[next], t: frac, idx, next };
+}
+
+function drawSky(ph) {
+  const top = lerpHex(ph.a.top, ph.b.top, ph.t);
+  const mid = lerpHex(ph.a.mid, ph.b.mid, ph.t);
+  const hor = lerpHex(ph.a.hor, ph.b.hor, ph.t);
+
+  // 3-stop gradient
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0, top);
+  grad.addColorStop(0.5, mid);
+  grad.addColorStop(1, hor);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawStars(ph, time) {
+  const alpha = lerp(ph.a.starAlpha, ph.b.starAlpha, ph.t);
+  if (alpha < 0.01) return;
+  STARS.forEach(s => {
+    const tw = 0.6 + 0.4 * Math.sin(s.twinkle + time * 0.002);
+    ctx.fillStyle = `rgba(255,255,255,${alpha * tw})`;
+    const px = Math.round(s.x * W);
+    const py = Math.round(s.y * H);
+    ctx.fillRect(px, py, s.r+1, s.r+1);
+  });
+}
+
+function drawMoon(ph) {
+  const alpha = lerp(ph.a.moonAlpha, ph.b.moonAlpha, ph.t);
+  if (alpha < 0.01) return;
+  const mx = Math.round(MOON.x * W);
+  const my = Math.round(MOON.y * H);
+  const mr = Math.max(2, Math.round(W * 0.025));
+  ctx.fillStyle = `rgba(220,220,255,${alpha})`;
+  // Pixel circle
+  for (let dy = -mr; dy <= mr; dy++) {
+    for (let dx = -mr; dx <= mr; dx++) {
+      if (dx*dx+dy*dy <= mr*mr) ctx.fillRect(mx+dx, my+dy, 1, 1);
+    }
+  }
+  // Shadow
+  ctx.fillStyle = `rgba(10,15,40,${alpha*0.85})`;
+  const off = Math.round(mr * 0.35);
+  for (let dy = -mr; dy <= mr; dy++) {
+    for (let dx = -mr+off; dx <= mr; dx++) {
+      if (dx*dx+dy*dy <= mr*mr) ctx.fillRect(mx+dx, my+dy, 1, 1);
+    }
+  }
+}
+
+function drawSun(ph, time) {
+  const alpha = lerp(ph.a.sunAlpha, ph.b.sunAlpha, ph.t);
+  if (alpha < 0.01) return;
+
+  // Sun position: rises left, sets right
+  const cycleT = (time % TOTAL) / TOTAL;
+  const sunX = Math.round(W * (0.1 + 0.8 * Math.sin(cycleT * Math.PI)));
+  const sunY = Math.round(H * (0.85 - 0.65 * Math.sin(cycleT * Math.PI)));
+
+  const r = Math.round(lerp(ph.a.sunR, ph.b.sunR, ph.t));
+  const g = Math.round(lerp(ph.a.sunG, ph.b.sunG, ph.t));
+  const b = Math.round(lerp(ph.a.sunB, ph.b.sunB, ph.t));
+
+  const sr = Math.max(3, Math.round(W * 0.03));
+
+  // Glow rings
+  for (let ring = 3; ring >= 1; ring--) {
+    const rr = sr + ring * 3;
+    ctx.fillStyle = `rgba(${r},${g},${b},${alpha * 0.12 / ring})`;
+    for (let dy = -rr; dy <= rr; dy++) {
+      for (let dx = -rr; dx <= rr; dx++) {
+        if (dx*dx+dy*dy <= rr*rr) ctx.fillRect(sunX+dx, sunY+dy, 1, 1);
+      }
+    }
+  }
+
+  // Core
+  ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+  for (let dy = -sr; dy <= sr; dy++) {
+    for (let dx = -sr; dx <= sr; dx++) {
+      if (dx*dx+dy*dy <= sr*sr) ctx.fillRect(sunX+dx, sunY+dy, 1, 1);
+    }
+  }
+
+  // Reflection on mountains (simple horizontal streak)
+  if (sunY > H * 0.5) {
+    ctx.fillStyle = `rgba(${r},${g},${b},${alpha * 0.15})`;
+    const streakY = Math.round(H * 0.65);
+    for (let i = 0; i < 5; i++) {
+      const sw = Math.round((5 - i) * W * 0.04);
+      ctx.fillRect(sunX - sw/2, streakY + i*2, sw, 1);
+    }
+  }
+}
+
+function drawMountains(ph) {
+  // Snow cap alpha — only visible at night/dawn
+  const snowAlpha = lerp(ph.a.starAlpha, ph.b.starAlpha, ph.t) * 0.85;
+
+  layers.forEach(({ pts, snowPts, layer: li }) => {
+    const ci = ph.idx, ni = ph.next;
+    const ca = MTN_COLORS[ci]?.[li] || '#111';
+    const cb = MTN_COLORS[ni]?.[li] || '#111';
+    ctx.fillStyle = lerpHex(ca, cb, ph.t);
+
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    ctx.lineTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.lineTo(W, H);
+    ctx.closePath();
+    ctx.fill();
+
+    // Snow caps on back layers during night/dawn
+    if (snowPts.length && snowAlpha > 0.05) {
+      snowPts.forEach(pi => drawSnowCap(pts, pi, snowAlpha));
+    }
+  });
+}
+
+// ── Scanline overlay ──────────────────────────────────────────
+function drawScanlines() {
+  ctx.fillStyle = 'rgba(0,0,0,0.07)';
+  for (let y = 0; y < H; y += 2) ctx.fillRect(0, y, W, 1);
+}
+
+// ── Main loop ─────────────────────────────────────────────────
+const timeLabel = document.getElementById('timeLabel');
+let startTime = performance.now();
+
+function draw(now) {
+  const elapsed = now - startTime;
+  const ph = getPhase(elapsed);
+
+  drawSky(ph);
+  drawStars(ph, elapsed);
+  drawShootingStars(ph, elapsed);
+  drawMoon(ph);
+  drawClouds(ph, elapsed);
+  drawSun(ph, elapsed);
+  drawMountains(ph);
+  drawBirds(ph, elapsed);
+  drawFireflies(ph, elapsed);
+  drawScanlines();
+
+  // Update label
+  timeLabel.textContent = ph.a.name;
+
+  // Show click hint only during night/dusk/dawn (when shooting stars are most visible)
+  const hintEl = document.querySelector('.click-hint');
+  if (hintEl) {
+    const showHint = ph.idx === 0 || ph.idx === 1 || ph.idx === 6 || ph.idx === 7;
+    const transitionAlpha = (ph.idx === 6 && ph.t > 0.5) || (ph.idx === 7) || ph.idx === 0 || (ph.idx === 1 && ph.t < 0.5);
+    if (showHint) hintEl.classList.add('visible');
+    else hintEl.classList.remove('visible');
+  }
+
+  requestAnimationFrame(draw);
+}
+
+resize();
+buildMountains();
+requestAnimationFrame(draw);
+
+// ── Click to spawn shooting star ──────────────────────────────
+canvas.addEventListener('click', (e) => {
+  // Convert screen coords to canvas pixel coords
+  const scaleX = W / window.innerWidth;
+  const scaleY = H / window.innerHeight;
+  const cx = e.clientX * scaleX;
+  const cy = e.clientY * scaleY;
+
+  // Only spawn if clicking sky area (above mountains)
+  const mountainTop = H * 0.55;
+  if (cy > mountainTop) return;
+
+  shootingStars.push({
+    x: cx / W,
+    y: cy / H,
+    vx: 0.003 + Math.random() * 0.003,
+    vy: 0.001 + Math.random() * 0.002,
+    life: 0,
+    maxLife: 50 + Math.random() * 20,
+    len: 10 + Math.floor(Math.random() * 8),
+    manual: true
+  });
+});
+
+// ── Draw pixel social icons ────────────────────────────────────
+function drawPixelIcon(id, pixels, color) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const c = el.getContext('2d');
+  c.clearRect(0, 0, 16, 16);
+  c.fillStyle = color;
+  pixels.forEach(([x, y, w, h]) => c.fillRect(x, y, w || 1, h || 1));
+}
+
+// GitHub mark (pixel art cat-head silhouette simplified)
+const GH = [
+  [4,1,8,1],[2,2,2,1],[12,2,2,1],[1,3,1,1],[14,3,1,1],
+  [1,4,14,1],[1,5,14,1],[2,6,12,1],[3,7,10,1],
+  [2,8,4,1],[10,8,4,1],[1,9,5,1],[10,9,5,1],
+  [0,10,6,1],[10,10,6,1],[0,11,16,1],[1,12,14,1],
+  [2,13,12,1],[4,14,8,1],[5,15,6,1],
+  // ears
+  [3,0,1,2],[12,0,1,2],
+];
+
+// Instagram camera pixel art
+const IG = [
+  [2,2,12,1],[2,3,1,7],[13,3,1,7],[2,9,12,1],
+  [6,1,4,1],[7,0,2,1], // lens bump
+  [5,4,6,1],[4,5,1,4],[10,5,1,4],[5,8,6,1], // lens ring
+  [6,5,4,1],[5,6,1,2],[9,6,1,2],[6,7,4,1],  // lens inner
+  [11,3,2,2], // flash dot
+];
+
+// YouTube play button pixel art
+const YT = [
+  [1,2,14,1],[1,3,1,9],[14,3,1,9],[1,11,14,1],
+  // play triangle
+  [4,4,1,7],[5,5,1,5],[6,6,1,3],[7,7,1,1],
+  [5,4,1,1],[6,5,1,1],[7,6,1,1],
+  // right side of triangle
+  [10,4,1,7],[9,5,1,5],[8,6,1,3],
+  [9,4,1,1],[8,5,1,1],
+];
+
+function initIcons() {
+  const warm = 'rgba(255,210,120,0.9)';
+  drawPixelIcon('icon-github',    GH, warm);
+  drawPixelIcon('icon-instagram', IG, warm);
+  drawPixelIcon('icon-youtube',   YT, warm);
+}
+
+// Run after DOM ready
+setTimeout(initIcons, 100);
+
+</script>
+</body>
+</html>
